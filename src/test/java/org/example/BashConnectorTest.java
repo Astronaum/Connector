@@ -19,8 +19,8 @@ class BashConnectorTest {
         config.setShell("C:\\Program Files\\Git\\bin\\bash.exe");*/
 
         // For Windows
-        /*config.setScriptPath("test.bat");
-        config.setShell("cmd.exe");*/
+        config.setScriptPath("script.bat");
+        config.setShell("cmd.exe");
 
         connector.init(config);
 

@@ -44,7 +44,7 @@ public class BashConnector implements Connector, CreateOp, DeleteOp, TestOp, Sea
 
     @Override
     public Configuration getConfiguration() {
-        return null;
+        return configuration;
     }
 
     @Override
