@@ -15,12 +15,12 @@ class BashConnectorTest {
         BashConfiguration config = new BashConfiguration();
 
         //For bash
-        /*config.setScriptPath("script.sh");
-        config.setShell("/bin/bash");*/
+        config.setScriptPath("test.sh");
+        config.setShell("C:\\Program Files\\Git\\bin\\bash.exe");
 
         // For Windows
-        config.setScriptPath("script.bat");
-        config.setShell("cmd.exe");
+        /*config.setScriptPath("test.bat");
+        config.setShell("cmd.exe");*/
 
         connector.init(config);
 
@@ -31,7 +31,7 @@ class BashConnectorTest {
         String lastName = "Doe";
 
         // Pass the arguments to the script method
-        String output = connector.executeScript("CREATE_USER", username, email, firstName, lastName);
+        String output = connector.executeScript("createUser", username, email, firstName, lastName);
 
         // Debugging output
         System.out.println(output); // Print the output to the console for inspection

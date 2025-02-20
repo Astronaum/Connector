@@ -38,7 +38,7 @@ import org.identityconnectors.framework.spi.operations.UpdateAttributeValuesOp;
 import org.identityconnectors.framework.spi.operations.UpdateOp;
 
 @ConnectorClass(configurationClass = BashConfiguration.class, displayNameKey = "bash.connector.display")
-public class BashConnector implements Connector, CreateOp, DeleteOp, TestOp, SearchOp<Filter> {
+public class BashConnector implements Connector, CreateOp, DeleteOp, TestOp, SearchOp<Filter>, SchemaOp {
 
     private BashConfiguration configuration;
 
@@ -138,6 +138,23 @@ public class BashConnector implements Connector, CreateOp, DeleteOp, TestOp, Sea
             writer.write(scriptContent);
         }
         return tempScript;
+    }
+
+    public Schema schema() {
+        SchemaBuilder schemaBuilder = new SchemaBuilder(BashConnector.class);
+
+        // Define object class for user accounts
+        ObjectClassInfoBuilder objectClassBuilder = new ObjectClassInfoBuilder();
+        objectClassBuilder.setType(ObjectClass.ACCOUNT_NAME);
+
+        // Define required and optional attributes for provisioning
+        objectClassBuilder.addAttributeInfo(AttributeInfoBuilder.define(Name.NAME).setRequired(true).build());
+        objectClassBuilder.addAttributeInfo(AttributeInfoBuilder.define("email").setRequired(false).build());
+        objectClassBuilder.addAttributeInfo(AttributeInfoBuilder.define("roles").setMultiValued(true).build());
+
+        schemaBuilder.defineObjectClass(objectClassBuilder.build());
+
+        return schemaBuilder.build();
     }
 
 }
