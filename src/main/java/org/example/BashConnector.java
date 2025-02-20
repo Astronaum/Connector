@@ -82,7 +82,9 @@ public class BashConnector implements Connector, CreateOp, DeleteOp, TestOp, Sea
     @Override
     public Uid create(ObjectClass objectClass, Set<Attribute> attributes, OperationOptions options) {
         String username = AttributeUtil.getAsStringValue(AttributeUtil.find(Name.NAME, attributes));
-        executeScript("createUser", username);
+        String email = AttributeUtil.getAsStringValue(AttributeUtil.find("email", attributes));
+        String roles = AttributeUtil.getAsStringValue(AttributeUtil.find("roles", attributes));
+        executeScript("createUser", username, email, roles);
         return new Uid(username);
     }
 
@@ -148,6 +150,7 @@ public class BashConnector implements Connector, CreateOp, DeleteOp, TestOp, Sea
         objectClassBuilder.setType(ObjectClass.ACCOUNT_NAME);
 
         // Define required and optional attributes for provisioning
+        objectClassBuilder.addAttributeInfo(AttributeInfoBuilder.define(Uid.NAME).setRequired(true).build());
         objectClassBuilder.addAttributeInfo(AttributeInfoBuilder.define(Name.NAME).setRequired(true).build());
         objectClassBuilder.addAttributeInfo(AttributeInfoBuilder.define("email").setRequired(false).build());
         objectClassBuilder.addAttributeInfo(AttributeInfoBuilder.define("roles").setMultiValued(true).build());
