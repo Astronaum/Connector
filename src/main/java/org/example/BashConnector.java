@@ -1,44 +1,15 @@
 package org.example;
 
 import java.util.*;
-import java.util.logging.Filter;
-
 import java.io.*;
 
 import org.identityconnectors.framework.common.objects.*;
 import org.identityconnectors.framework.spi.*;
 import org.identityconnectors.framework.spi.operations.*;
-import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.common.security.GuardedString;
-import org.identityconnectors.framework.api.operations.APIOperation;
-import org.identityconnectors.framework.api.operations.ResolveUsernameApiOp;
-import org.identityconnectors.framework.common.objects.Attribute;
-import org.identityconnectors.framework.common.objects.ObjectClass;
-import org.identityconnectors.framework.common.objects.ObjectClassInfo;
-import org.identityconnectors.framework.common.objects.OperationOptionInfo;
-import org.identityconnectors.framework.common.objects.OperationOptions;
-import org.identityconnectors.framework.common.objects.ResultsHandler;
-import org.identityconnectors.framework.common.objects.Schema;
-import org.identityconnectors.framework.common.objects.SyncResultsHandler;
-import org.identityconnectors.framework.common.objects.SyncToken;
-import org.identityconnectors.framework.common.objects.Uid;
-import org.identityconnectors.framework.common.objects.filter.AbstractFilterTranslator;
-import org.identityconnectors.framework.common.objects.filter.FilterTranslator;
-import org.identityconnectors.framework.spi.Configuration;
-import org.identityconnectors.framework.spi.Connector;
-import org.identityconnectors.framework.spi.ConnectorClass;
-import org.identityconnectors.framework.spi.operations.AuthenticateOp;
-import org.identityconnectors.framework.spi.operations.CreateOp;
-import org.identityconnectors.framework.spi.operations.DeleteOp;
-import org.identityconnectors.framework.spi.operations.SchemaOp;
-import org.identityconnectors.framework.spi.operations.SearchOp;
-import org.identityconnectors.framework.spi.operations.SyncOp;
-import org.identityconnectors.framework.spi.operations.TestOp;
-import org.identityconnectors.framework.spi.operations.UpdateAttributeValuesOp;
-import org.identityconnectors.framework.spi.operations.UpdateOp;
 
 @ConnectorClass(configurationClass = BashConfiguration.class, displayNameKey = "bash.connector.display")
-public class BashConnector implements Connector, CreateOp, DeleteOp, TestOp, SearchOp<Filter>, SchemaOp {
+public class BashConnector implements Connector, CreateOp, DeleteOp, UpdateOp, TestOp, SchemaOp {
 
     private BashConfiguration configuration;
 
@@ -63,28 +34,11 @@ public class BashConnector implements Connector, CreateOp, DeleteOp, TestOp, Sea
     }
 
     @Override
-    public FilterTranslator<Filter> createFilterTranslator(ObjectClass objectClass, OperationOptions operationOptions) {
-        return null;
-    }
-
-    @Override
-    public void executeQuery(ObjectClass objectClass, Filter filter, ResultsHandler handler, OperationOptions options) {
-        String output = executeScript("getUsers");
-        for (String user : output.split("\n")) {
-            ConnectorObject obj = new ConnectorObjectBuilder()
-                    .setUid(user.trim())
-                    .setName(user.trim())
-                    .build();
-            handler.handle(obj);
-        }
-    }
-
-    @Override
     public Uid create(ObjectClass objectClass, Set<Attribute> attributes, OperationOptions options) {
         String username = AttributeUtil.getAsStringValue(AttributeUtil.find(Name.NAME, attributes));
         String email = AttributeUtil.getAsStringValue(AttributeUtil.find("email", attributes));
-        String roles = AttributeUtil.getAsStringValue(AttributeUtil.find("roles", attributes));
-        executeScript("createUser", username, email, roles);
+
+        executeScript("createUser", username, email);
         return new Uid(username);
     }
 
@@ -93,19 +47,27 @@ public class BashConnector implements Connector, CreateOp, DeleteOp, TestOp, Sea
         executeScript("deleteUser", uid.getUidValue());
     }
 
+    @Override
+    public Uid update(ObjectClass objectClass, Uid uid, Set<Attribute> attributes, OperationOptions options) {
+        String email = AttributeUtil.getAsStringValue(AttributeUtil.find("email", attributes));
+
+        executeScript("updateUser", uid.getUidValue(), email);
+        return uid;
+    }
+
     public String executeScript(String operation, String... args) {
         try {
             String script = configuration.getScriptContent();
             File scriptFile = (script != null && !script.isEmpty()) ? writeScriptToFile(script) : new File(configuration.getScriptPath());
 
-            String shell = configuration.getShell(); // Get shell from config
+            String shell = configuration.getShell();
             List<String> command = new ArrayList<>();
 
             if (shell.contains("cmd.exe")) {
                 command.add("cmd.exe");
                 command.add("/c");
             } else {
-                command.add(shell); // Use provided shell (e.g., /bin/bash, /usr/bin/sh)
+                command.add(shell);
             }
 
             command.add(scriptFile.getAbsolutePath());
@@ -124,7 +86,7 @@ public class BashConnector implements Connector, CreateOp, DeleteOp, TestOp, Sea
             }
             process.waitFor();
 
-            if (script != null) scriptFile.delete(); // Cleanup temp script
+            if (script != null) scriptFile.delete();
             return output.toString();
         } catch (Exception e) {
             throw new RuntimeException("Script execution failed", e);
@@ -142,22 +104,18 @@ public class BashConnector implements Connector, CreateOp, DeleteOp, TestOp, Sea
         return tempScript;
     }
 
+    @Override
     public Schema schema() {
         SchemaBuilder schemaBuilder = new SchemaBuilder(BashConnector.class);
 
-        // Define object class for user accounts
         ObjectClassInfoBuilder objectClassBuilder = new ObjectClassInfoBuilder();
         objectClassBuilder.setType(ObjectClass.ACCOUNT_NAME);
 
-        // Define required and optional attributes for provisioning
         objectClassBuilder.addAttributeInfo(AttributeInfoBuilder.define(Uid.NAME).setRequired(true).build());
         objectClassBuilder.addAttributeInfo(AttributeInfoBuilder.define(Name.NAME).setRequired(true).build());
         objectClassBuilder.addAttributeInfo(AttributeInfoBuilder.define("email").setRequired(false).build());
-        objectClassBuilder.addAttributeInfo(AttributeInfoBuilder.define("roles").setMultiValued(true).build());
 
         schemaBuilder.defineObjectClass(objectClassBuilder.build());
-
         return schemaBuilder.build();
     }
-
 }

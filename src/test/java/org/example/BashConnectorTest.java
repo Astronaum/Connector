@@ -27,18 +27,16 @@ class BashConnectorTest {
         // Execute a test operation
         String username = "johndoe";
         String email = "johndoe@example.com";
-        String firstName = "John";
-        String lastName = "Doe";
 
         // Pass the arguments to the script method
-        String output = connector.executeScript("createUser", username, email, firstName, lastName);
+        String output = connector.executeScript("createUser", username, email);
 
         // Debugging output
         System.out.println(output); // Print the output to the console for inspection
 
         // Assertions to validate the output
         Assertions.assertNotNull(output);
-        assertTrue(output.contains("User created successfully"));
+        assertTrue(output.contains("Creating user: " + username));
 
     }
 }
